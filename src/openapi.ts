@@ -21,6 +21,11 @@ export function openapi(env: Env) {
     info: {
       title: "Lottewy Agent Giveaway API",
       version: "0.1.0",
+      "x-logo": {
+        url: env.WEB_ORIGIN + "/brand/apple-touch-icon.png",
+        altText: "Lottewy",
+        backgroundColor: "#fafaf7",
+      },
       description: isMainnet
         ? "Create and pay for verifiable giveaway draws on Arc Mainnet using USDC through Circle Gateway."
         : "Create and pay for verifiable giveaway draws. Arc Testnet execution; test USDC payments through Circle Gateway.",
