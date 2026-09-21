@@ -1,15 +1,18 @@
 {
   "repository": "https://github.com/d20dao/lottewy",
-  "commit": "e07f5f983f253b797676f87b76029e65c02a646f",
+  "commit": "13a14f1e5803c976cc90236cb8c8b831ce20f630",
   "files": {
+    "docs/arc-mainnet.json": "c16a3ad81ec41034ac4f90b2f7200369f75e073ac84bcd95d763ed2bf9ba50cb",
     "docs/arc-testnet.json": "3260de49bdaef88be0d661e5e4c85147e5adb1369bd000ed7421979fe86e2fa9",
+    "docs/lottewy-mainnet.json": "cadd0e9de5e42ceda95c058cf19a09cd7c4cddfcc16cfb2ac9766bd66ee1bf33",
     "docs/lottewy-testnet.json": "d95419546865cb104c7098f49f42052fe87c3c7fe57497c84fc48419e23a0cf8",
-    "shared/chain.ts": "b9021d7fb80cf019033a82e7e24052d89dd021b507a867278c503682f9c4b73d",
-    "shared/core.ts": "ff44819540333f25da5d73e8436c2c540f38f26f2ecab07acbecc20b34a06d35",
+    "shared/chain.ts": "cf43b96140760b959117061146512e8cff7599a3c44583e1be83ff54346643f6",
+    "shared/core.ts": "ac9c1f0fb4e48b8f7d839c3a147f3c793e27c8f7e44297b7f4de5a67ef9f5c3d",
     "shared/draw-intent.ts": "e3908e86ab67f8a5052bab7193c8c00433b21ab94e13dfd2818fd22c747cde81",
     "shared/finality.ts": "7e2b2d7a5686ea16839998bed22f40e8e9dda34b367e80c9dafa99c353d9cfc5",
+    "shared/network.ts": "720ed4829838075c0c848edea529372d3a22dc4191de3410e4a74c5c62de9fb2",
     "shared/proof-bundle.ts": "8a874051bc3ac34733fdca77c5698f8055d4276f15dba955ac57f94882e306a3",
-    "shared/proof.ts": "5ab448e05b468e8ed26a1c5789e98714f94931ae7c345fab4b7d4b643a721f33",
+    "shared/proof.ts": "80f3b192cf4e7ba6099f62994f1bbbe364591c21261b5d6fc4288c24a0fd3c1a",
     "worker/content-filter.ts": "70689d05b137f92efe472cb41807df8fcd96a67c214110dfebda02e63a52c6ca",
     "worker/jev.ts": "d74bab8363a412f70425e0509ca44cd2c143a98b062ba19b77ab85d6a58af2b0",
     "worker/storage.ts": "c84d7269cd037145c3762ad5a8ac20a6b76efddfae33e5f8903d663a9386031c"

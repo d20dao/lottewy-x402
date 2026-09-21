@@ -14,6 +14,7 @@ import { openTicket, materialize } from "./tickets";
 import { operation, quota, guard } from "./store";
 import { executionPlan, processJobs, publicOperation, relayer } from "./chain";
 import { assertSalesAvailable, noCaptureReasons } from "./settlement";
+import { referencePrice } from "./pricing";
 
 const gatewayFor = (env: Env) =>
   createGatewayMiddleware({
@@ -21,14 +22,18 @@ const gatewayFor = (env: Env) =>
     facilitatorUrl: GATEWAY_URL,
     networks: NETWORKS,
     description:
-      "Create one verifiable giveaway draw on Arc Testnet. Includes D20DAO and execution costs. Test USDC only.",
+      "Create one verifiable giveaway draw on Arc. Includes D20DAO and execution costs. Follow the advertised payment network.",
   });
 export function paidRoll(env: Env, schedule: (work: Promise<unknown>) => void) {
   const unpaidGateway = gatewayFor(env);
   return async (req: Request, res: Response) => {
     const header = req.headers["payment-signature"];
     if (!header && !req.body?.draftToken) {
-      await unpaidGateway.require("$" + env.PRICE_USDC)(req, res, () => {});
+      await unpaidGateway.require("$" + (await referencePrice(env)))(
+        req,
+        res,
+        () => {},
+      );
       return;
     }
     const ticket = await openTicket(env, req.body?.draftToken);
@@ -51,8 +56,18 @@ export function paidRoll(env: Env, schedule: (work: Promise<unknown>) => void) {
       return;
     }
     await assertSalesAvailable(env);
+    requireValue(
+      ticket.expires > Math.floor(Date.now() / 1000),
+      "Draft quote expired. Create a fresh draft before paying",
+    );
+    requireValue(
+      env.PRICING_MODE === "cost"
+        ? ticket.pricingMode === "cost" && !!ticket.executionQuote
+        : ticket.price === env.PRICE_USDC,
+      "Pricing changed. Create a fresh draft before paying",
+    );
     if (!header) {
-      await unpaidGateway.require("$" + env.PRICE_USDC)(req, res, () => {});
+      await unpaidGateway.require("$" + ticket.price)(req, res, () => {});
       return;
     }
     requireValue(
@@ -64,7 +79,7 @@ export function paidRoll(env: Env, schedule: (work: Promise<unknown>) => void) {
       "Draft expired. Create a fresh draft before paying",
     );
     requireValue(
-      ticket.price === env.PRICE_USDC,
+      env.PRICING_MODE === "cost" || ticket.price === env.PRICE_USDC,
       "Price changed. Create a fresh draft before paying",
     );
     let payload: any;
@@ -86,7 +101,7 @@ export function paidRoll(env: Env, schedule: (work: Promise<unknown>) => void) {
     );
     requireValue(
       NETWORKS.includes(payload.accepted?.network),
-      "Only advertised testnet payment networks are supported",
+      "Only advertised payment networks are supported",
     );
     // The replay key uses the actual authorization identity, never client-supplied asset metadata.
     const paymentKey = hash([
@@ -212,7 +227,7 @@ export function paidRoll(env: Env, schedule: (work: Promise<unknown>) => void) {
             paymentKey,
             text,
             g.created,
-            env.PRICE_USDC,
+            ticket.price,
             payload.accepted.network,
             storedPayment.reference,
             JSON.stringify(checked),
@@ -297,7 +312,7 @@ export function paidRoll(env: Env, schedule: (work: Promise<unknown>) => void) {
             .run();
         } catch {}
     });
-    await gateway.require("$" + env.PRICE_USDC)(req, res, () => {
+    await gateway.require("$" + ticket.price)(req, res, () => {
       void (async () => {
         if (!settlementStored) {
           res.status(503).json({

@@ -1,14 +1,28 @@
 import { defineChain, parseAbi } from "viem";
 import { CHAIN_ID } from "./core";
+import { isMainnet } from "./network";
 export const arc = defineChain({
   id: CHAIN_ID,
-  name: "Arc Testnet",
+  name: isMainnet ? "Arc" : "Arc Testnet",
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-  rpcUrls: { default: { http: ["https://rpc.testnet.arc.io"] } },
-  blockExplorers: {
-    default: { name: "Arcscan", url: "https://testnet.arcscan.app" },
+  rpcUrls: {
+    default: {
+      http: [
+        isMainnet
+          ? "https://rpc.blockdaemon.mainnet.arc.io"
+          : "https://rpc.testnet.arc.io",
+      ],
+    },
   },
-  testnet: true,
+  blockExplorers: {
+    default: {
+      name: isMainnet ? "Arc Explorer" : "Arcscan",
+      url: isMainnet
+        ? "https://explorer.arc.io"
+        : "https://testnet.arcscan.app",
+    },
+  },
+  testnet: !isMainnet,
 });
 export const consumerAbi = parseAbi([
   "function start(bytes32 giveawayId, bytes32 commitment) payable returns (uint256)",

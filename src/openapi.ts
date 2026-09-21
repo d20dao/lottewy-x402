@@ -1,3 +1,4 @@
+import { isMainnet } from "./protocol/shared/network";
 import type { Env } from "./config";
 const string = (description: string, extra: Record<string, unknown> = {}) => ({
   type: "string",
@@ -20,16 +21,19 @@ export function openapi(env: Env) {
     info: {
       title: "Lottewy Agent Giveaway API",
       version: "0.1.0",
-      description:
-        "Create and pay for verifiable giveaway draws. Arc Testnet execution; test USDC payments through Circle Gateway.",
+      description: isMainnet
+        ? "Create and pay for verifiable giveaway draws on Arc Mainnet using USDC through Circle Gateway."
+        : "Create and pay for verifiable giveaway draws. Arc Testnet execution; test USDC payments through Circle Gateway.",
       contact: { email: env.SUPPORT_EMAIL },
       "x-guidance":
-        "Call POST /v1/giveaways with the EVM owner address that will pay and a participant list, title, rules and winner counts. This prepares a client-held encrypted draft without charging or publishing it. Save draftToken and privateArchive securely. Pay POST /v1/roll with draftToken using an x402 client and a Gateway-funded testnet wallet; payment payer must match owner. The fixed price includes one draw and execution. A 200 response acknowledges the durable paid operation; poll the returned status URL until completed. Read the public proof JSON to independently replay selection and verify VRF evidence. Retry with the same draftToken; never make a new payment for an uncertain operation. Only test networks are accepted. The API uses an authorized service relayer and an upgradeable consumer; it does not hold or deliver giveaway prizes.",
+        "Call POST /v1/giveaways with the EVM owner address that will pay and a participant list, title, rules and winner counts. This prepares a client-held encrypted draft without charging or publishing it. Save draftToken and privateArchive securely. Pay POST /v1/roll with draftToken using an x402 client and a Gateway-funded wallet; payment payer must match owner. The prepared quote covers D20DAO fees and estimated gas, with no platform markup. Cost quotes expire after five minutes; an unpaid QUOTE_CHANGED response requires a fresh preparation. A 200 response acknowledges the durable paid operation; poll the returned status URL until completed. Read the public proof JSON to independently replay selection and verify VRF evidence. Retry with the same draftToken; never make a new payment for an uncertain operation. Use only the networks advertised by the live 402 payment requirements. The API uses an authorized service relayer and an upgradeable consumer; it does not hold or deliver giveaway prizes.",
     },
     servers: [
       {
         url: env.PUBLIC_ORIGIN,
-        description: "Testnet API. No mainnet payments or mainnet draws.",
+        description: isMainnet
+          ? "Mainnet API. Payments use real USDC."
+          : "Testnet API. No mainnet payments or mainnet draws.",
       },
     ],
     externalDocs: {
@@ -101,7 +105,17 @@ export function openapi(env: Env) {
           description:
             "Return 402 if unpaid. Validate and moderate the draft before settlement. On successful settlement, return the stable operation and status URL; completion is asynchronous. Replay uses the same draftToken and never charges for a second draw. Uncertain payment or draw submissions remain locked for reconciliation.",
           "x-payment-info": {
-            price: { mode: "fixed", currency: "USDC", amount: env.PRICE_USDC },
+            price: {
+              mode: env.PRICING_MODE === "cost" ? "dynamic" : "fixed",
+              currency: "USDC",
+              amount: env.PRICE_USDC,
+              ...(env.PRICING_MODE === "cost"
+                ? {
+                    description:
+                      "Reference estimate. Prepare a draft for a five-minute price bound to its token: D20DAO fee plus estimated gas, with no platform markup.",
+                  }
+                : {}),
+            },
             protocols: [{ x402: {} }],
           },
           requestBody: {
@@ -141,7 +155,7 @@ export function openapi(env: Env) {
               headers: {
                 "PAYMENT-REQUIRED": {
                   description:
-                    "Base64-encoded x402 v2 payment requirements with supported testnet networks.",
+                    "Base64-encoded x402 v2 payment requirements with supported payment networks.",
                   schema: { type: "string" },
                 },
               },
@@ -303,10 +317,23 @@ export function openapi(env: Env) {
             ),
             price: {
               type: "object",
-              description: "Fixed total price in test USDC.",
+              description:
+                "Quoted total USDC amount. Cost quotes include the D20DAO fee budget and estimated gas budget without platform markup.",
               properties: {
                 amount: string("Decimal USDC amount."),
                 currency: string("USDC."),
+                serviceFee: string(
+                  "D20DAO fee budget in USDC, when cost pricing is enabled.",
+                ),
+                gasBudget: string(
+                  "Estimated gas budget in USDC, when cost pricing is enabled.",
+                ),
+                platformFee: string(
+                  "Additional platform markup; zero for cost pricing.",
+                ),
+                description: string(
+                  "Explanation of the quote and estimation policy.",
+                ),
               },
             },
             next: {

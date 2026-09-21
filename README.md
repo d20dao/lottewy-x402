@@ -1,15 +1,17 @@
 # Lottewy Agent API
 
-Separate x402 service for preparing giveaway drafts, paying for one draw and retrieving public verifiable results. The website repository contains no x402 server code. This implementation is **testnet only**: Circle Gateway test USDC payments and Arc Testnet execution.
+Separate x402 service for preparing giveaway drafts, paying for one draw and retrieving public verifiable results. The website repository contains no x402 server code. The mainnet profile executes on Arc (5042), with USDC payments through Circle Gateway. Inspect the live 402 for accepted payment networks.
 
 ## Workflow
 
 1. `POST /v1/giveaways` with the paying EVM `owner` and a draft containing title, rules, participant entries and winner count. Keep the returned encrypted `draftToken` and `privateArchive` privately. Preparation does not store the raw participant list.
 2. `POST /v1/roll` with `draftToken`. The official Circle Gateway middleware returns an x402 v2 HTTP 402 challenge. The payment wallet must match the draft owner.
-3. Pay the advertised fixed total in test USDC. A successful response acknowledges a durable operation, not a completed draw. Poll the status URL until completed.
+3. Pay the prepared quote in USDC. Cost pricing uses the D20DAO fee budget plus estimated gas budget, with zero platform markup. Quotes expire after five minutes and are bound to the encrypted draft token. A successful response acknowledges a durable operation, not a completed draw. Poll the status URL until completed.
 4. Download `/v1/giveaways/{id}/proof` for the masked manifest, commitment, winner order and verified VRF evidence. Raw values and salts remain in the creator's private archive.
 
 Always retry the same draft token after a lost response. An existing operation is returned without another settlement, even without another payment header. Never authorize a fresh payment for an uncertain operation.
+
+An unpaid `QUOTE_CHANGED` response means network costs exceed the quote and no payment was captured; prepare a fresh draft. Bare 402 and OpenAPI amounts are reference estimates. The exact payment terms come from the prepared token. Service and gas budgets allow for network variation, so actual spending may be lower. `MAX_QUOTE_USDC` rejects estimates above the operator ceiling rather than charging them.
 
 ## Security and trust
 
@@ -23,7 +25,7 @@ The consumer is upgradeable and the API relayer is explicitly authorized. The re
 
 Requires Node 24 or newer. Install with `npm ci`, then `npm run typecheck` and `npm test`. Copy `.env.example` to a private `.dev.vars` for Wrangler; configure a dedicated testnet relayer, a random 32-byte draft encryption key and JEV. Never use the deployer key as the Worker relayer. Apply local D1 migrations before `npm run dev`.
 
-`GET /openapi.json` publishes OpenAPI 3.1 with request schemas, field descriptions, payment metadata and agent guidance. Set an approved support email and final price before publishing. The configuration in this repository is local/testnet preparation, not a completed deployment.
+`GET /openapi.json` publishes OpenAPI 3.1 with request schemas, field descriptions, payment metadata and agent guidance. The reviewed `env.mainnet` targets `api.lottewy.com`, uses `hello@lottewy.com` for support and `PRICING_MODE=cost`. Apply remote migrations for that environment before `npm run deploy`. Upload only the relayer key, mainnet draft-encryption secret and JEV key; never upload the deployer key. Testnet and mainnet databases and draft secrets are isolated.
 
 ## Release checks
 
@@ -35,6 +37,6 @@ The read-only D20DAO agent API reference reviewed for payment identity, durable 
 
 The follow-up Astra high review found and verified fixes for finalized binding-conflict queue starvation, historical fulfillment log gaps, unsent conflict reservations and unaffordable optional recovery. Conflicts are isolated as `binding_conflict`; pending signed nonces are preserved until their canonical receipts. Historical scans persist bounded consecutive pages in the waiting queue. Optional recovery yields to already-funded draws, and an uncertain journal acknowledgement is reconciled before another nonce can be used.
 
-The final pre-mainnet run completed request **5264** with one new 0.25 test-USDC SDK payment and verified proof export. Mainnet remains preparation-only: no mainnet transaction or Worker deployment is authorized. Wallet identities and current chain pins were checked read-only by the website repository's `scripts/mainnet-preflight.mjs`. Production price/contact and the new mainnet consumer deployment/profile must be finalized before launch; the active runtime is still testnet-only.
+The final pre-mainnet run completed request **5264** with one new 0.25 test-USDC SDK payment and verified proof export. This is historical testnet evidence, not a mainnet paid-call test. The mainnet consumer is separately deployed and pinned in `src/protocol/docs/lottewy-mainnet.json`. Mainnet uses real funds; inspect and estimate before any approved paid test. Unit tests cover cost-quote binding, no-markup pricing, cost drift and mainnet network selection.
 
 Secrets, local databases, artifacts and private Markdown are ignored. Before committing, run `node scripts/check-secrets.mjs --staged` and `node scripts/check-staged-docs.mjs`. Only English README and implementation documentation are intended for publication.

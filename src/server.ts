@@ -5,7 +5,8 @@ import { prepare } from "./tickets";
 import { operation, quota } from "./store";
 import { publicOperation, processJobs } from "./chain";
 import { paidRoll } from "./payments";
-import { hash } from "./protocol/shared/core";
+import { hash, CHAIN_ID } from "./protocol/shared/core";
+import { isMainnet } from "./protocol/shared/network";
 import { verifyD20 } from "./protocol/shared/proof";
 import {
   proofBundle,
@@ -14,6 +15,7 @@ import {
 import { loadJson, storeJson } from "./protocol/worker/storage";
 import { clientKey } from "./client-key";
 import { assertSalesAvailable } from "./settlement";
+import { referencePrice } from "./pricing";
 export function createApp(
   env: Env,
   schedule: (work: Promise<unknown>) => void,
@@ -47,7 +49,7 @@ export function createApp(
   app.get("/", (_req, res) =>
     res.json({
       name: "Lottewy Agent Giveaway API",
-      network: "Arc Testnet",
+      network: isMainnet ? "Arc Mainnet" : "Arc Testnet",
       openapi: `${env.PUBLIC_ORIGIN}/openapi.json`,
       docs: `${env.PUBLIC_ORIGIN}/docs`,
     }),
@@ -63,28 +65,28 @@ export function createApp(
       await assertSalesAvailable(env);
       available = true;
     } catch {}
-    res
-      .status(configured && available ? 200 : 503)
-      .json({
-        status: !configured
-          ? "configuration_pending"
-          : available
-            ? "ok"
-            : "sales_paused",
-        chainId: 5042002,
-        mainnet: false,
-        payments: "Circle Gateway testnet",
-        consumer: env.CONSUMER_ADDRESS,
-        checks:
-          "Configuration and queued work; live chain checks run before payment capture.",
-      });
+    res.status(configured && available ? 200 : 503).json({
+      status: !configured
+        ? "configuration_pending"
+        : available
+          ? "ok"
+          : "sales_paused",
+      chainId: CHAIN_ID,
+      mainnet: isMainnet,
+      payments: isMainnet ? "Circle Gateway USDC" : "Circle Gateway testnet",
+      consumer: env.CONSUMER_ADDRESS,
+      checks:
+        "Configuration and queued work; live chain checks run before payment capture.",
+    });
   });
-  app.get("/openapi.json", (_req, res) => res.json(openapi(env)));
+  app.get("/openapi.json", async (_req, res) =>
+    res.json(openapi({ ...env, PRICE_USDC: await referencePrice(env) })),
+  );
   app.get("/docs", (_req, res) =>
     res
       .type("html")
       .send(
-        `<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lottewy Agent API</title><style>body{max-width:760px;margin:40px auto;padding:0 20px;font:16px/1.7 system-ui;color:#20251c;background:#fafaf7}code,pre{overflow-wrap:anywhere;white-space:pre-wrap}a{color:#466a27}</style><h1>Lottewy Agent Giveaway API</h1><p>Arc Testnet execution. Circle Gateway test USDC payments. No mainnet funds.</p><p><a href="/openapi.json">OpenAPI 3.1</a></p><ol><li>POST /v1/giveaways with owner and draft. Keep draftToken and privateArchive privately. Preparation is free and does not persist the raw list.</li><li>POST /v1/roll with draftToken. An unpaid call returns 402 and PAYMENT-REQUIRED. Use an x402 client with a Gateway-funded testnet wallet matching owner.</li><li>A paid 200 response means the operation is durably queued. Poll its status URL until completed, then download the public proof JSON.</li></ol><h2>Reliability</h2><p>Reuse the same draftToken after a lost response. Never create another payment for payment_uncertain; poll the original ID. A failed onchain submission remains in refund_due for operator reconciliation. The advertised price covers one draw and execution; prize delivery is the organizer's responsibility.</p><h2>Privacy and trust</h2><p>The client keeps raw participants and salts. The API stores public masked manifests, payment records and transaction state. It uses an authorized relayer and an upgradeable contract. Cryptographic proof verifies the recorded selection, not participant identity or prize delivery.</p><h2>CLI</h2><pre>circle services inspect ${env.PUBLIC_ORIGIN}/v1/roll -X POST --output json</pre><p>Use the chain shown by inspect, estimate before paying, and cap the payment at the advertised price. The service accepts only Gateway test networks.</p></html>`,
+        `<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lottewy Agent API</title><style>body{max-width:760px;margin:40px auto;padding:0 20px;font:16px/1.7 system-ui;color:#20251c;background:#fafaf7}code,pre{overflow-wrap:anywhere;white-space:pre-wrap}a{color:#466a27}</style><h1>Lottewy Agent Giveaway API</h1><p>${isMainnet ? "Arc Mainnet execution. Circle Gateway USDC payments. Mainnet calls use real funds." : "Arc Testnet execution. Circle Gateway test USDC payments. No mainnet funds."}</p><p><a href="/openapi.json">OpenAPI 3.1</a></p><ol><li>POST /v1/giveaways with owner and draft. Keep draftToken and privateArchive privately. Preparation is free and does not persist the raw list.</li><li>POST /v1/roll with draftToken. An unpaid call returns 402 and PAYMENT-REQUIRED. Use an x402 client with a Gateway-funded wallet matching owner.</li><li>A paid 200 response means the operation is durably queued. Poll its status URL until completed, then download the public proof JSON.</li></ol><h2>Cost quotes</h2><p>Preparation returns a five-minute quote: D20DAO fee budget plus estimated gas budget, with no platform markup. Budgets allow for network variation, so actual gas and service spending can be lower. A bare 402 or the OpenAPI amount is a reference estimate; use your prepared draftToken for its exact payment terms. If costs exceed the quote before capture, prepare again. Never replace a paid or uncertain operation.</p><h2>Reliability</h2><p>Reuse the same draftToken after a lost response. Never create another payment for payment_uncertain; poll the original ID. A failed onchain submission remains in refund_due for operator reconciliation. The advertised price covers one draw and execution; prize delivery is the organizer's responsibility.</p><h2>Privacy and trust</h2><p>The client keeps raw participants and salts. The API stores public masked manifests, payment records and transaction state. It uses an authorized relayer and an upgradeable contract. Cryptographic proof verifies the recorded selection, not participant identity or prize delivery.</p><h2>CLI</h2><pre>circle services inspect ${env.PUBLIC_ORIGIN}/v1/roll -X POST --output json</pre><p>Use the chain shown by inspect, estimate before paying, and cap the payment at the advertised price. The service accepts only the Gateway networks advertised in the payment requirements.</p></html>`,
       ),
   );
   app.use("/v1", async (req, _res, next) => {

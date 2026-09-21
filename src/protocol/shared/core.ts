@@ -6,6 +6,7 @@ import {
   concatHex,
   type Hex,
 } from "viem";
+import { networkDeployment } from "./network";
 export const ALGORITHM = "lottewy-fy-reject-v1";
 export const WEIGHTED_ALGORITHM = "lottewy-weighted-reject-v2";
 export const MAX_WEIGHT = 1000;
@@ -31,9 +32,8 @@ export function weightingConflict(
     return "The rules promise equal chances, but the entries have different weights. Describe weighted selection in the rules, or use equal weights.";
   return null;
 }
-export const CHAIN_ID = 5042002;
-export const COORDINATOR =
-  "0xd20DA0FF9087d053f0291524Eac12abA1ADBd945" as const;
+export const CHAIN_ID = networkDeployment.chainId;
+export const COORDINATOR = networkDeployment.coordinator as `0x${string}`;
 export type Draft = {
   /** Explorer discoverability; signed metadata, not part of the draw manifest. */
   listed?: boolean;
@@ -67,6 +67,7 @@ export type Manifest = {
   entries: Entry[];
 };
 export type Giveaway = {
+  registration?: { kind: "discord"; campaignId: string; closedAt: number };
   refundAddress?: `0x${string}`;
   listed?: boolean;
   history?: { revision: number; commitment: Hex }[];

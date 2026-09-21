@@ -197,6 +197,41 @@ it("publishes valid OpenAPI 3.1 and a real multi-network unpaid 402 challenge", 
   expect(challenge.accepts.every((x: any) => x.amount === "100000")).toBe(true);
   expect(settlements).toBe(0);
 });
+it("binds the D20DAO plus gas estimate to the draft and charges that quote without markup", async () => {
+  env.PRICING_MODE = "cost";
+  env.MAX_QUOTE_USDC = "1.000000";
+  const p = await prepared();
+  expect(p.price).toMatchObject({
+    amount: "0.090000",
+    serviceFee: "0.080000",
+    gasBudget: "0.010000",
+    platformFee: "0.000000",
+  });
+  expect(p.expiresAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 300);
+  const response = await post("/v1/roll", { draftToken: p.draftToken });
+  expect(response.status).toBe(402);
+  const requirement = JSON.parse(
+    Buffer.from(response.headers.get("payment-required")!, "base64").toString(),
+  );
+  expect(requirement.accepts.every((a: any) => a.amount === "90000")).toBe(
+    true,
+  );
+  env.PRICE_USDC = "0.500000";
+  const authorization = JSON.parse(Buffer.from(payment(), "base64").toString());
+  authorization.payload.authorization.value = "90000";
+  authorization.accepted.amount = "90000";
+  const header = Buffer.from(JSON.stringify(authorization)).toString("base64");
+  expect(
+    (await post("/v1/roll", { draftToken: p.draftToken }, header)).status,
+  ).toBe(200);
+  expect(
+    db.sqlite.prepare("SELECT amount FROM operations WHERE id=?").get(p.id),
+  ).toMatchObject({ amount: "0.090000" });
+  expect(
+    (await post("/v1/roll", { draftToken: p.draftToken }, header)).status,
+  ).toBe(200);
+  expect(settlements).toBe(1);
+});
 it("prepares a stateless encrypted draft and does not persist raw participant values", async () => {
   const p = await prepared();
   expect(p.status).toBe("prepared");

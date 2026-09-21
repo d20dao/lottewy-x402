@@ -35,7 +35,7 @@ vi.mock("../src/recovery", () => ({
   processRecovery: vi.fn(async () => false),
 }));
 
-import { processJobs } from "../src/chain";
+import { processJobs, executionPlan } from "../src/chain";
 import type { Env } from "../src/config";
 
 const owner = "0x0000000000000000000000000000000000000011";
@@ -45,6 +45,56 @@ const blockHash = (digit: string) => `0x${digit.repeat(64)}` as `0x${string}`;
 const txHash = (digit: string) => `0x${digit.repeat(64)}` as `0x${string}`;
 const slotValue = (address: string) =>
   `0x${"0".repeat(24)}${address.slice(2).toLowerCase()}`;
+
+it("keeps a cost quote fixed within its execution bounds and rejects higher costs before capture", async () => {
+  const { db, env } = makeEnvironment();
+  env.PRICING_MODE = "cost";
+  env.MAX_QUOTE_USDC = "1.000000";
+  let gasPrice = 20000000000n,
+    fee = 35000000000000000n,
+    estimated = 200000n;
+  fakes.draw = [owner, hash("empty"), 0n, hash("empty"), 0];
+  const read = fakes.client.readContract;
+  fakes.client.readContract = async (args: any) =>
+    args.functionName === "relayers"
+      ? true
+      : args.functionName === "quoteFeeAt"
+        ? fee
+        : read(args);
+  fakes.client.getGasPrice = async () => gasPrice;
+  fakes.client.estimateContractGas = async () => estimated;
+  const ticket: any = {
+    id: crypto.randomUUID(),
+    owner,
+    commitment: hash("quote"),
+    price: "0.000000",
+  };
+  try {
+    const first = await executionPlan(env, ticket, true);
+    expect(first.reservedUnits).toBe(44600);
+    ticket.price = "0.044600";
+    ticket.executionQuote = {
+      value: first.value,
+      gas: first.gas,
+      maxFeePerGas: first.maxFeePerGas,
+    };
+    gasPrice = 21000000000n;
+    fee = 34000000000000000n;
+    estimated = 210000n;
+    expect((await executionPlan(env, ticket)).reservedUnits).toBe(44600);
+    gasPrice = 41000000000n;
+    await expect(executionPlan(env, ticket)).rejects.toMatchObject({
+      code: "QUOTE_CHANGED",
+    });
+    gasPrice = 21000000000n;
+    estimated = 250000n;
+    await expect(executionPlan(env, ticket)).rejects.toMatchObject({
+      code: "EXECUTION_GAS_LIMIT",
+    });
+  } finally {
+    db.sqlite.close();
+  }
+});
 
 function makeEnvironment() {
   const db = database();

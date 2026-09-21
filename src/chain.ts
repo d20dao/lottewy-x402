@@ -23,7 +23,7 @@ import {
 import { ApiError, type Env } from "./config";
 import { lease, release, operation, type Operation } from "./store";
 import type { Ticket } from "./tickets";
-import d20 from "./protocol/docs/arc-testnet.json";
+import { networkDeployment as d20 } from "./protocol/shared/network";
 import { reconcilePayments } from "./settlement";
 import { processRecovery } from "./recovery";
 export const agentAbi = [
@@ -102,7 +102,15 @@ export async function chainClient(env: Env) {
   }
   return client;
 }
-export async function executionPlan(env: Env, ticket: Ticket) {
+export async function executionPlan(
+  env: Env,
+  ticket: Ticket,
+  quoteOnly = false,
+) {
+  const locked =
+    env.PRICING_MODE === "cost" && !quoteOnly
+      ? ticket.executionQuote
+      : undefined;
   const client = await chainClient(env),
     account = relayer(env),
     address = env.CONSUMER_ADDRESS as Address;
@@ -119,7 +127,7 @@ export async function executionPlan(env: Env, ticket: Ticket) {
       hash(ticket.id),
     ]),
   );
-  const [balance, authorized, draw, value, gasPrice] = await Promise.all([
+  const [balance, authorized, draw, currentFee, gasPrice] = await Promise.all([
     client.getBalance({ address: account.address, blockNumber: block.number }),
     client.readContract({
       address,
@@ -139,7 +147,10 @@ export async function executionPlan(env: Env, ticket: Ticket) {
       address: COORDINATOR,
       abi: coordinatorAbi,
       functionName: "quoteFeeAt",
-      args: [150000, (block.baseFeePerGas * 130n) / 100n],
+      args: [
+        150000,
+        locked ? block.baseFeePerGas : (block.baseFeePerGas * 130n) / 100n,
+      ],
       blockNumber: block.number,
     }),
     client.getGasPrice(),
@@ -156,6 +167,13 @@ export async function executionPlan(env: Env, ticket: Ticket) {
       "DRAW_EXISTS",
       "This giveaway already has an onchain request",
     );
+  const value = locked ? BigInt(locked.value) : currentFee;
+  if (locked && (currentFee > value || gasPrice > BigInt(locked.maxFeePerGas)))
+    throw new ApiError(
+      409,
+      "QUOTE_CHANGED",
+      "Network costs exceeded this quote. No payment was captured. Prepare a fresh draft.",
+    );
   const estimated = await client.estimateContractGas({
     address,
     abi: agentAbi,
@@ -164,16 +182,24 @@ export async function executionPlan(env: Env, ticket: Ticket) {
     account: account.address,
     value,
   });
-  const gas = (estimated * 120n + 99n) / 100n;
-  if (gas > BigInt(env.GAS_LIMIT))
+  const gas = locked ? BigInt(locked.gas) : (estimated * 120n + 99n) / 100n;
+  if (gas > BigInt(env.GAS_LIMIT) || estimated > gas)
     throw new ApiError(
       503,
       "EXECUTION_GAS_LIMIT",
       "The draw exceeds the configured execution gas cap. No payment was captured.",
     );
-  const maxFeePerGas = gasPrice * 2n,
+  const maxFeePerGas = locked ? BigInt(locked.maxFeePerGas) : gasPrice * 2n,
     budget = value + gas * maxFeePerGas,
-    price = parseUnits(env.PRICE_USDC, 6) * MICRO;
+    price =
+      parseUnits(
+        quoteOnly
+          ? env.MAX_QUOTE_USDC || "1.000000"
+          : env.PRICING_MODE === "cost"
+            ? ticket.price
+            : env.PRICE_USDC,
+        6,
+      ) * MICRO;
   if (budget > price)
     throw new ApiError(
       503,
@@ -184,7 +210,7 @@ export async function executionPlan(env: Env, ticket: Ticket) {
     throw new ApiError(
       503,
       "RELAYER_LIQUIDITY",
-      "The relayer is temporarily low on testnet USDC. No payment was captured.",
+      "The relayer is temporarily low on USDC. No payment was captured.",
     );
   return {
     value: value.toString(),

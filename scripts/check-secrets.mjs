@@ -8,7 +8,7 @@ const publicKeys = new Set([
 ]);
 const secrets = [
   ...new Set(
-    [".env", ".dev.vars"].filter(existsSync).flatMap((path) =>
+    [".env", ".env.mainnet", ".dev.vars"].filter(existsSync).flatMap((path) =>
       Object.entries(parseEnv(readFileSync(path, "utf8")))
         .filter(([key, value]) => !publicKeys.has(key) && value.length >= 16)
         .map(([, value]) => value),

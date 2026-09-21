@@ -22,8 +22,10 @@ import {
 import { arc, consumerAbi, coordinatorAbi } from "./chain";
 import { assert, CHAIN_ID, COORDINATOR, hash, type Giveaway } from "./core";
 import { finalizedBlock } from "./finality";
-import deployment from "../docs/arc-testnet.json";
-import lottewyDeployment from "../docs/lottewy-testnet.json";
+import {
+  networkDeployment as deployment,
+  consumerDeployment as lottewyDeployment,
+} from "./network";
 const evidenceAbi = parseAbi([
   "event FulfillmentEvidence(uint256 indexed requestId, bytes32 indexed transcriptHash, bytes packet)",
 ]);

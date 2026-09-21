@@ -7,6 +7,8 @@ import {
 import { assertPublicContent } from "./protocol/worker/content-filter";
 import type { Address, Hex } from "viem";
 import { ApiError, requireValue, type Env } from "./config";
+import { executionPlan } from "./chain";
+import { priceBreakdown } from "./pricing";
 export type Ticket = {
   version: 1;
   id: string;
@@ -17,6 +19,8 @@ export type Ticket = {
   expires: number;
   price: string;
   consumer: string;
+  pricingMode?: "cost";
+  executionQuote?: { value: string; gas: string; maxFeePerGas: string };
 };
 const bytes = (value: string) =>
   Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
@@ -101,6 +105,19 @@ export async function prepare(env: Env, input: any) {
     price: env.PRICE_USDC,
     consumer: env.CONSUMER_ADDRESS,
   };
+  let breakdown: ReturnType<typeof priceBreakdown> | undefined;
+  if (env.PRICING_MODE === "cost") {
+    const plan = await executionPlan(env, ticket, true);
+    breakdown = priceBreakdown(plan);
+    ticket.price = breakdown.amount;
+    ticket.expires = Math.floor(Date.now() / 1000) + 300;
+    ticket.pricingMode = "cost";
+    ticket.executionQuote = {
+      value: plan.value,
+      gas: plan.gas,
+      maxFeePerGas: plan.maxFeePerGas,
+    };
+  }
   return {
     id,
     status: "prepared",
@@ -109,7 +126,7 @@ export async function prepare(env: Env, input: any) {
     manifest: built.manifest,
     privateArchive: { draft, entries: built.privateEntries },
     expiresAt: ticket.expires,
-    price: { amount: env.PRICE_USDC, currency: "USDC" },
+    price: breakdown || { amount: ticket.price, currency: "USDC" },
     next: { method: "POST", url: `${env.PUBLIC_ORIGIN}/v1/roll` },
   };
 }

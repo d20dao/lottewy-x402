@@ -97,7 +97,69 @@
         "crons": [
           "* * * * *"
         ]
+      },
+      "define": {
+        "__LOTTEWY_MAINNET__": "false"
+      }
+    },
+    "mainnet": {
+      "name": "lottewy-agent-api-mainnet",
+      "account_id": "d9fa81565ed7a49a6076dba363d09f10",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        {
+          "pattern": "api.lottewy.com",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "PUBLIC_ORIGIN": "https://api.lottewy.com",
+        "WEB_ORIGIN": "https://lottewy.com",
+        "SUPPORT_EMAIL": "hello@lottewy.com",
+        "SELLER_ADDRESS": "0x7ad78fc8097dfea5c12dbb503d6eb6e60f34b40b",
+        "RPC_URL": "https://rpc.blockdaemon.mainnet.arc.io",
+        "CONSUMER_ADDRESS": "0x70824f30bd7a3d3994a5579ad5752d9f0f4a557e",
+        "CONSUMER_CODE_HASH": "0x752a0da23ba14c1b45e3f6a8b224df28db6fec0631818838fbdbd965897b3463",
+        "IMPLEMENTATION_ADDRESS": "0x3200383f656abf2d38d83869ab4fa371f6caa09c",
+        "IMPLEMENTATION_CODE_HASH": "0x4727a28b1a07a89beefbada197e1e9b677d641ca632c5fc58c4ca80376fc5ac6",
+        "PRICE_USDC": "0.000000",
+        "GAS_LIMIT": "1000000",
+        "JEV_MODEL": "jev-1.13.0",
+        "JEV_MODE": "live",
+        "MODE": "production",
+        "PRICING_MODE": "cost",
+        "MAX_QUOTE_USDC": "1.000000"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "lottewy-agent-mainnet",
+          "database_id": "64e21ef3-4262-4efb-b728-1ef1941981f7",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "ratelimits": [
+        {
+          "name": "EDGE_LIMITER",
+          "namespace_id": "726095042",
+          "simple": {
+            "limit": 60,
+            "period": 60
+          }
+        }
+      ],
+      "triggers": {
+        "crons": [
+          "* * * * *"
+        ]
+      },
+      "define": {
+        "__LOTTEWY_MAINNET__": "true"
       }
     }
+  },
+  "define": {
+    "__LOTTEWY_MAINNET__": "false"
   }
 }
