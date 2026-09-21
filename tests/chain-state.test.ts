@@ -139,7 +139,11 @@ function makeEnvironment() {
       fakes.receipts.get(hash) ?? null,
     getTransactionCount: async () => 7n,
     getBalance: async () => 1_000_000_000_000_000_000n,
-    sendRawTransaction: async ({ serializedTransaction }: { serializedTransaction: string }) => {
+    sendRawTransaction: async ({
+      serializedTransaction,
+    }: {
+      serializedTransaction: string;
+    }) => {
       fakes.sentRaw.push(serializedTransaction);
       return txHash("e");
     },
@@ -151,13 +155,16 @@ function makeEnvironment() {
   return { db, env };
 }
 
-function insertOperation(db: ReturnType<typeof database>, input: {
-  id: string;
-  status: string;
-  commitment: `0x${string}`;
-  publicJson: string;
-  observedBlock?: number;
-}) {
+function insertOperation(
+  db: ReturnType<typeof database>,
+  input: {
+    id: string;
+    status: string;
+    commitment: `0x${string}`;
+    publicJson: string;
+    observedBlock?: number;
+  },
+) {
   db.sqlite
     .prepare(
       `INSERT INTO operations(
@@ -183,7 +190,11 @@ function insertOperation(db: ReturnType<typeof database>, input: {
     );
 }
 
-function configureCompletedDraw(env: Env, id: string, commitment: `0x${string}`) {
+function configureCompletedDraw(
+  env: Env,
+  id: string,
+  commitment: `0x${string}`,
+) {
   const requestId = 77n;
   const word = hash("random-word");
   const requestTx = txHash("a");
@@ -231,6 +242,137 @@ function configureCompletedDraw(env: Env, id: string, commitment: `0x${string}`)
 }
 
 describe("chain worker state transitions", () => {
+  it("quarantines a direct-start binding conflict so the next paid draw can complete", async () => {
+    const { db, env } = makeEnvironment(),
+      bad = "conflicted",
+      good = "next-paid";
+    const badCommitment = hash(bad),
+      goodCommitment = hash(good);
+    configureCompletedDraw(env, bad, badCommitment);
+    fakes.request.refundAddress = owner;
+    insertOperation(db, {
+      id: bad,
+      status: "paid",
+      commitment: badCommitment,
+      publicJson: JSON.stringify({
+        id: bad,
+        owner,
+        refundAddress,
+        manifest: {},
+      }),
+    });
+    await processJobs(env);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT status,error_code,request_id,release_block FROM operations WHERE id=?",
+        )
+        .get(bad),
+    ).toMatchObject({
+      status: "binding_conflict",
+      error_code: "DRAW_BINDING_CONFLICT",
+      request_id: null,
+      release_block: 0,
+    });
+    configureCompletedDraw(env, good, goodCommitment);
+    insertOperation(db, {
+      id: good,
+      status: "paid",
+      commitment: goodCommitment,
+      publicJson: JSON.stringify({
+        id: good,
+        owner,
+        refundAddress,
+        manifest: {},
+      }),
+    });
+    await processJobs(env);
+    expect(
+      db.sqlite.prepare("SELECT status FROM operations WHERE id=?").get(good),
+    ).toMatchObject({ status: "completed" });
+    expect(fakes.sentRaw).toHaveLength(0);
+  });
+
+  it("keeps driving a journaled nonce until its canonical receipt before quarantining conflict", async () => {
+    const { db, env } = makeEnvironment(),
+      id = "pending-conflict",
+      commitment = hash(id),
+      ownHash = txHash("e");
+    configureCompletedDraw(env, id, commitment);
+    fakes.request.refundAddress = owner;
+    insertOperation(db, {
+      id,
+      status: "submitting",
+      commitment,
+      publicJson: JSON.stringify({ id, owner, refundAddress, manifest: {} }),
+    });
+    db.sqlite
+      .prepare("UPDATE operations SET raw_tx=?,tx_hash=?,tx_nonce=7 WHERE id=?")
+      .run("0x02", ownHash, id);
+    await processJobs(env);
+    expect(fakes.sentRaw).toEqual(["0x02"]);
+    expect(
+      db.sqlite.prepare("SELECT status,release_block FROM operations").get(),
+    ).toMatchObject({ status: "submitting", release_block: null });
+    fakes.receipts.set(ownHash, {
+      status: "reverted",
+      blockNumber: 120n,
+      blockHash: blockHash("4"),
+    });
+    await processJobs(env);
+    expect(
+      db.sqlite.prepare("SELECT status,release_block FROM operations").get(),
+    ).toMatchObject({ status: "binding_conflict", release_block: 120 });
+    expect(fakes.wallet.signTransaction).not.toHaveBeenCalled();
+  });
+
+  it("finds delayed callback delivery in the historical middle gap with persisted bounded pages", async () => {
+    const { db, env } = makeEnvironment(),
+      id = "delayed-callback",
+      commitment = hash(id);
+    configureCompletedDraw(env, id, commitment);
+    fakes.finalized.number = 5000n;
+    fakes.fulfilled.blockNumber = 2500n;
+    fakes.receipts.get(fakes.fulfilled.transactionHash).blockNumber = 2500n;
+    const pages: bigint[][] = [];
+    fakes.client.getContractEvents = async ({
+      eventName,
+      fromBlock,
+      toBlock,
+    }: any) => {
+      if (eventName === "DrawRequested") return [fakes.requested];
+      pages.push([fromBlock, toBlock]);
+      return fromBlock <= 2500n && toBlock >= 2500n ? [fakes.fulfilled] : [];
+    };
+    insertOperation(db, {
+      id,
+      status: "paid",
+      commitment,
+      publicJson: JSON.stringify({ id, owner, refundAddress, manifest: {} }),
+    });
+    await processJobs(env);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT status,fulfillment_scan_block,release_block,request_id FROM operations",
+        )
+        .get(),
+    ).toMatchObject({
+      status: "waiting",
+      fulfillment_scan_block: 2100,
+      release_block: 100,
+      request_id: "77",
+    });
+    db.sqlite.prepare("UPDATE operations SET checked_at=0").run();
+    await processJobs(env);
+    expect(
+      db.sqlite.prepare("SELECT status FROM operations").get(),
+    ).toMatchObject({ status: "completed" });
+    expect(pages).toEqual([
+      [100n, 2099n],
+      [2100n, 4099n],
+    ]);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -260,7 +402,9 @@ describe("chain worker state transitions", () => {
 
     await processJobs(env);
     const first = db.sqlite
-      .prepare("SELECT status,public_json,observed_block FROM operations WHERE id=?")
+      .prepare(
+        "SELECT status,public_json,observed_block FROM operations WHERE id=?",
+      )
       .get(id) as any;
     expect(first.status).toBe("completed");
     expect(first.observed_block).toBe(200);
@@ -274,7 +418,9 @@ describe("chain worker state transitions", () => {
     fakes.finalized = { ...fakes.finalized, number: 150n };
     await processJobs(env);
     const second = db.sqlite
-      .prepare("SELECT status,public_json,observed_block FROM operations WHERE id=?")
+      .prepare(
+        "SELECT status,public_json,observed_block FROM operations WHERE id=?",
+      )
       .get(id) as any;
     expect(second.status).toBe("completed");
     expect(second.observed_block).toBe(200);
@@ -318,7 +464,9 @@ describe("chain worker state transitions", () => {
 
     await processJobs(env);
     const row = db.sqlite
-      .prepare("SELECT status,raw_tx,tx_hash,tx_nonce FROM operations WHERE id=?")
+      .prepare(
+        "SELECT status,raw_tx,tx_hash,tx_nonce FROM operations WHERE id=?",
+      )
       .get(id) as any;
     expect(row.status).toBe("paid");
     expect(row.raw_tx).toBeNull();

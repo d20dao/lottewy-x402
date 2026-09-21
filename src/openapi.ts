@@ -326,7 +326,7 @@ export function openapi(env: Env) {
           properties: {
             id: string("Stable giveaway UUID."),
             status: string(
-              "settling, payment_uncertain, manual_review, payment_failed, paid, submitting, waiting, callback, completed, expired or refund_due.",
+              "settling, payment_uncertain, manual_review, payment_failed, paid, submitting, waiting, callback, completed, expired, refund_due or binding_conflict. A binding conflict requires operator resolution and never opens a replacement draw.",
             ),
             payment: {
               type: "object",

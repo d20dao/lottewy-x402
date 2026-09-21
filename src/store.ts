@@ -19,6 +19,7 @@ export type Operation = {
   error_code: string | null;
   created: number;
   proof_ref: string | null;
+  fulfillment_scan_block: number | null;
 };
 export async function operation(env: Env, id: string) {
   return env.DB.prepare("SELECT * FROM operations WHERE id=?")

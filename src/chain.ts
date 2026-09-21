@@ -218,8 +218,39 @@ async function observe(
     blockNumber: block.number,
   });
   if (draw[4] === 0) return false;
+  async function quarantineConflict() {
+    let releaseBlock = 0;
+    // A journaled transaction may still consume this nonce and gas. Keep driving
+    // those exact bytes until its canonical receipt exists before removing it.
+    if (op.raw_tx) {
+      const own = await client
+        .getTransactionReceipt({ hash: op.tx_hash! })
+        .catch(() => null);
+      if (!own || own.blockNumber > block.number) return false;
+      const canonical = await client.getBlock({ blockNumber: own.blockNumber });
+      if (canonical.hash !== own.blockHash) return false;
+      releaseBlock = Number(own.blockNumber);
+    }
+    await env.DB.prepare(
+      `UPDATE operations SET status='binding_conflict',error_code='DRAW_BINDING_CONFLICT',request_id=NULL,
+      release_block=?,checked_at=MAX(checked_at,?),observed_block=? WHERE id=?
+      AND status IN ('paid','submitting','waiting','callback','refund_due') AND observed_block<=?
+      AND EXISTS(SELECT 1 FROM leases WHERE name='relayer' AND token=? AND expires>?)`,
+    )
+      .bind(
+        releaseBlock,
+        Date.now(),
+        Number(block.number),
+        op.id,
+        Number(block.number),
+        token,
+        Date.now(),
+      )
+      .run();
+    return true;
+  }
   if (draw[0].toLowerCase() !== op.owner || draw[1] !== op.commitment)
-    throw new Error("Chain binding mismatch");
+    return quarantineConflict();
   const req = await client.readContract({
     address: COORDINATOR,
     abi: coordinatorAbi,
@@ -232,7 +263,7 @@ async function observe(
     req.clientSeed !== op.commitment ||
     req.refundAddress.toLowerCase() !== g.refundAddress?.toLowerCase()
   )
-    throw new Error("Request binding mismatch");
+    return quarantineConflict();
   const requests = await client.getContractEvents({
     address,
     abi: agentAbi,
@@ -255,6 +286,16 @@ async function observe(
     receipt.blockNumber > block.number
   )
     throw new Error("Request not finalized");
+  let spentBlock = Number(req.requestBlock);
+  if (op.raw_tx && op.tx_hash !== request.transactionHash) {
+    const own = await client
+      .getTransactionReceipt({ hash: op.tx_hash! })
+      .catch(() => null);
+    if (!own || own.blockNumber > block.number) return false;
+    const canonical = await client.getBlock({ blockNumber: own.blockNumber });
+    if (canonical.hash !== own.blockHash) return false;
+    spentBlock = Math.max(spentBlock, Number(own.blockNumber));
+  }
   let status = req.refunded
     ? "expired"
     : req.fulfilled && !req.delivered
@@ -265,29 +306,47 @@ async function observe(
   if (draw[4] === 2) {
     if (!req.fulfilled || !req.delivered || req.randomness !== draw[3])
       throw new Error("Randomness binding mismatch");
-    const end =
-      req.requestBlock + 1999n < block.number
-        ? req.requestBlock + 1999n
-        : block.number;
-    let delivered = await client.getContractEvents({
+    const cursor = BigInt(
+      op.fulfillment_scan_block ?? Number(req.requestBlock),
+    );
+    const start = cursor > req.requestBlock ? cursor : req.requestBlock;
+    if (start > block.number) return true;
+    const end = start + 1999n < block.number ? start + 1999n : block.number;
+    const delivered = await client.getContractEvents({
       address,
       abi: agentAbi,
       eventName: "DrawFulfilled",
       args: { key, requestId: draw[2] },
-      fromBlock: req.requestBlock,
+      fromBlock: start,
       toBlock: end,
     });
-    if (!delivered.length && end < block.number)
-      delivered = await client.getContractEvents({
-        address,
-        abi: agentAbi,
-        eventName: "DrawFulfilled",
-        args: { key, requestId: draw[2] },
-        fromBlock: block.number > 1999n ? block.number - 1999n : 0n,
-        toBlock: block.number,
-      });
     const event = delivered.find((log) => log.args.word === draw[3]);
-    if (!event) throw new Error("Delivery receipt unavailable");
+    if (!event) {
+      // Advance only after a successful finalized page. RPC failures never skip
+      // a range; the final page is retried if the RPC omitted a known event.
+      const next = end < block.number ? end + 1n : start;
+      g.status = "waiting";
+      await env.DB.prepare(
+        `UPDATE operations SET fulfillment_scan_block=MAX(COALESCE(fulfillment_scan_block,0),?),
+        checked_at=MAX(checked_at,?),error_code='DELIVERY_SCAN_PENDING',status='waiting',public_json=?,request_id=?,release_block=?,observed_block=? WHERE id=? AND observed_block<=?
+        AND status IN ('paid','submitting','waiting','callback','refund_due')
+        AND EXISTS(SELECT 1 FROM leases WHERE name='relayer' AND token=? AND expires>?)`,
+      )
+        .bind(
+          Number(next),
+          Date.now(),
+          JSON.stringify(g),
+          draw[2].toString(),
+          spentBlock,
+          Number(block.number),
+          op.id,
+          Number(block.number),
+          token,
+          Date.now(),
+        )
+        .run();
+      return true;
+    }
     const finalReceipt = await client.getTransactionReceipt({
       hash: event.transactionHash,
     });
@@ -321,7 +380,7 @@ async function observe(
       status,
       JSON.stringify(g),
       draw[2].toString(),
-      Number(req.requestBlock),
+      spentBlock,
       Date.now(),
       Number(block.number),
       op.id,

@@ -118,37 +118,47 @@ export async function processRecovery(
     });
     const raw = await wallet.signTransaction(tx),
       txHash = keccak256(raw);
-    await env.DB.batch([
-      env.DB.prepare(
-        `INSERT INTO recovery_transactions(operation_id,kind,status,raw_tx,tx_hash,tx_nonce,reserved_units,created)
+    try {
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO recovery_transactions(operation_id,kind,status,raw_tx,tx_hash,tx_nonce,reserved_units,created)
         SELECT ?,?,'pending',?,?,?,?,? WHERE EXISTS(SELECT 1 FROM leases WHERE name='relayer' AND token=? AND expires>?)
         AND COALESCE((SELECT SUM(reserved_units) FROM operations WHERE release_block IS NULL OR release_block>?),0)
           +COALESCE((SELECT SUM(reserved_units) FROM recovery_transactions WHERE release_block IS NULL OR release_block>?),0)+?<=?`,
-      ).bind(
-        op.id,
+        ).bind(
+          op.id,
+          kind,
+          raw,
+          txHash,
+          nonce,
+          units,
+          Date.now(),
+          token,
+          Date.now(),
+          Number(block.number),
+          Number(block.number),
+          units,
+          Number(balance / 1000000000000n),
+        ),
+        guard(env),
+        env.DB.prepare("DELETE FROM atomic_guard"),
+      ]);
+      task = {
+        operation_id: op.id,
         kind,
-        raw,
-        txHash,
-        nonce,
-        units,
-        Date.now(),
-        token,
-        Date.now(),
-        Number(block.number),
-        Number(block.number),
-        units,
-        Number(balance / 1000000000000n),
-      ),
-      guard(env),
-      env.DB.prepare("DELETE FROM atomic_guard"),
-    ]);
-    task = {
-      operation_id: op.id,
-      kind,
-      status: "pending",
-      raw_tx: raw,
-      tx_hash: txHash,
-    };
+        status: "pending",
+        raw_tx: raw,
+        tx_hash: txHash,
+      };
+    } catch {
+      // A refused optional reservation must not starve already-funded draws.
+      // If the batch committed but its response was lost, adopt its durable raw
+      // transaction before allowing another nonce. A failed lookup stays closed.
+      task = await env.DB.prepare(
+        "SELECT * FROM recovery_transactions WHERE status='pending' ORDER BY created LIMIT 1",
+      ).first<Recovery>();
+      if (!task) return false;
+    }
   }
   let receipt = await client
     .getTransactionReceipt({ hash: task.tx_hash })

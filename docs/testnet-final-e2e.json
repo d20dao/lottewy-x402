@@ -1,0 +1,15 @@
+{
+  "run": "final-pre-mainnet-20260921",
+  "environment": "Local Cloudflare Worker, real Arc Testnet and Circle Gateway testnet",
+  "giveawayId": "7135e472-fb46-4c37-91a3-a7d21b918f9b",
+  "requestId": "5264",
+  "payment": {
+    "status": 200,
+    "amount": "250000",
+    "settlement": "c9387450-67c6-4ee0-bb36-92a442d6239a",
+    "id": "7135e472-fb46-4c37-91a3-a7d21b918f9b"
+  },
+  "proofVerified": true,
+  "retryReturnedSameOperation": true,
+  "mainnetTransactionsSubmitted": 0
+}

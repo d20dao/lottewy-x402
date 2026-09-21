@@ -1,0 +1,176 @@
+{
+  "schema": "lottewy-proof-bundle-v1",
+  "kind": "onchain",
+  "giveaway": {
+    "id": "7135e472-fb46-4c37-91a3-a7d21b918f9b",
+    "owner": "0xaf3a40ff429e2976958912a9ab7dbf2fa7d1e043",
+    "revision": 1
+  },
+  "commitment": "0xc94477c69d1cac138138bcd037316d5c8cdf2e95b5c223af0be763f3162c7df4",
+  "manifest": {
+    "version": 1,
+    "algorithm": "lottewy-fy-reject-v1",
+    "normalization": "nfc-trim-v1",
+    "masking": "strict-v2-en",
+    "id": "7135e472-fb46-4c37-91a3-a7d21b918f9b",
+    "owner": "0xaf3a40ff429e2976958912a9ab7dbf2fa7d1e043",
+    "revision": 1,
+    "title": "Paid agent integration test",
+    "description": "Synthetic integration test with no prize.",
+    "rules": "Free synthetic entries. Every entry has an equal chance. No prize is awarded.",
+    "winners": 1,
+    "reserves": 1,
+    "entries": [
+      {
+        "id": 1,
+        "label": "T*** e*** A***",
+        "commitment": "0x2efbebaba54769ee8eaff70a92f62e445afe03e0421eb75277f2e2ee38dd444b"
+      },
+      {
+        "id": 2,
+        "label": "T*** e*** B***",
+        "commitment": "0x20a059c24273adb7af917680e55ec2d1fac6aed4b2d92e2d1b355d931468d558"
+      },
+      {
+        "id": 3,
+        "label": "T*** e*** G***",
+        "commitment": "0x029eda2bc1007b466f5ea358bedfab6a38f40ef110c94b4ecb1209f2262d1292"
+      }
+    ]
+  },
+  "randomWord": "0xd777fad003ebc8225cd2a103b754f1135a37b1c5c3874edb15015724edbf4c89",
+  "results": {
+    "winners": [
+      {
+        "rank": 1,
+        "id": 3,
+        "label": "T*** e*** G***",
+        "commitment": "0x029eda2bc1007b466f5ea358bedfab6a38f40ef110c94b4ecb1209f2262d1292"
+      }
+    ],
+    "alternates": [
+      {
+        "rank": 1,
+        "id": 1,
+        "label": "T*** e*** A***",
+        "commitment": "0x2efbebaba54769ee8eaff70a92f62e445afe03e0421eb75277f2e2ee38dd444b"
+      }
+    ]
+  },
+  "selection": {
+    "algorithm": "lottewy-fy-reject-v1",
+    "domain": "lottewy-selection-v1",
+    "steps": [
+      {
+        "draw": 0,
+        "role": "winner",
+        "entryId": 3,
+        "counter": "0",
+        "derivedHash": "0x78e9744c9c555ad05b0302b5ff877da219148f065366940e76dd015d76fc8e9c",
+        "sample": "54690019864081334966870517254388226030670087304358139058491547733065199292060",
+        "limit": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+        "rejected": 0,
+        "range": 3,
+        "ticket": 2,
+        "intervalStart": 2,
+        "intervalEnd": 3,
+        "remainingCount": 3,
+        "weight": 1,
+        "nearby": [
+          {
+            "id": 1,
+            "position": 0
+          },
+          {
+            "id": 2,
+            "position": 1
+          },
+          {
+            "id": 3,
+            "position": 2
+          }
+        ]
+      },
+      {
+        "draw": 1,
+        "role": "alternate",
+        "entryId": 1,
+        "counter": "1",
+        "derivedHash": "0x6ee335a914d5f748abd87b53b8c1c7910092c5c7e4a7a4c62e0cfaeaeb5ac1f3",
+        "sample": "50155857978845628933130323000251394141253397785991376469551401560140458672627",
+        "limit": "115792089237316195423570985008687907853269984665640564039457584007913129639936",
+        "rejected": 0,
+        "range": 2,
+        "ticket": 1,
+        "intervalStart": 1,
+        "intervalEnd": 2,
+        "remainingCount": 2,
+        "weight": 1,
+        "nearby": [
+          {
+            "id": 2,
+            "position": 0
+          },
+          {
+            "id": 1,
+            "position": 1
+          }
+        ]
+      }
+    ]
+  },
+  "onchain": {
+    "chainId": 5042002,
+    "coordinator": "0xd20DA0FF9087d053f0291524Eac12abA1ADBd945",
+    "consumer": "0x8c190538f506c305a16576cbf832877e3775700b",
+    "refundAddress": "0xAf3a40fF429e2976958912a9AB7Dbf2fa7d1E043",
+    "requestId": "5264",
+    "requestTransaction": "0x0c391d362a7dc268fd3d64309f1cd33a8c1e5fbe7aa2392f728cca57fea6e8c8",
+    "requestBlock": {
+      "number": "63276883",
+      "hash": "0xd7be258b59474c0b868195f7542dc2d9bc2d2f12434c7b703a8a34100c2dd7c8",
+      "logIndex": 52
+    },
+    "fulfillmentTransaction": "0xaa7cc13b614f87cbb767ec0d7da3a6901b93051243cddd8175bb1126e75f340c",
+    "fulfillmentBlock": {
+      "number": "63276892",
+      "hash": "0xc147266ac7283a4c12ed40adb1ef62f8dedfb1d84e95603118a3835b68a0b20e"
+    },
+    "vrf": {
+      "packet": "0x066f3cf1c45b3b5f4c41a1b49d3be7bfdb4bce7d646b4e1310151e77723171087925041854c5453e6b1d0d8b2cb0fd5d2fcac4ff523f5c473ce58bf68db96950bc7cdcfe01a68b7d1bdf134e87d915db9560014a4997c73c88358bccfa4c66a1781bdf2096caf8ed47cbe5be00b31f379b7477909e0fc57f382226b6a66e3e3536eb72e4faa4e37907bd8b8a145508f6da726c940b7af273483b0b02899962ecb15d92c6260c4219c551fa20e3d7cfc31b24352a50b5b402148e75171b04931ff524f9c78c1537f0dbff44900d68ea6e25c96faba79f9a7cbe307ed63763db5b00000000000000000000000044751872b2353bff6a4d8b2fc3e49ccf44b3f4b6b748c7e7cd566295ed1a531e6190da831f5847ba20dda2e96e8aef19eca176c429e33534b1537c0db36b8026239551f3a317bacafdb61142add847dede9e0642a9abd32e188cad0362b2ac1208d8bf91ccee7d20d219c7d6f5254fd78b17a64eeb888a14230a7da620e128e8acddb2276dfb50a8f022aaf5481014ba03d01f823a3ed32cce8710221356cb08a57593c307652934979634f80922e61f7b526e98",
+      "proofHash": "0x920517ffbd22783191909a726e3a14fc1cafc116f15f9d2ae8121d03469a5ce1",
+      "transcriptHash": "0xfc69349731233c866bbdb1977024f8f760a85e7a9f1fac134e2a2c659ce4802f",
+      "acceptanceTransaction": "0xaa7cc13b614f87cbb767ec0d7da3a6901b93051243cddd8175bb1126e75f340c",
+      "publicKey": [
+        "2910417738496693011210470598284962862409598884646283647563466153439024738568",
+        "54795256282923525257375959827487949810298285441503839963185911026804978182480"
+      ],
+      "request": {
+        "consumer": "0x8C190538f506c305A16576cbf832877e3775700b",
+        "callbackGasLimit": 150000,
+        "requestBlock": "63276883",
+        "targetBlock": "63276887",
+        "deadline": "1790008062",
+        "refundAddress": "0xAf3a40fF429e2976958912a9AB7Dbf2fa7d1E043",
+        "clientSeed": "0xc94477c69d1cac138138bcd037316d5c8cdf2e95b5c223af0be763f3162c7df4",
+        "mappingHash": "0xdfded4ed5ac76ba7379cfe7b3b0f53e768dca8d45a34854e649cfc3c18cbd9cd",
+        "blockHash": "0x07733d59fc5b61463078d640fcccd9f29c0f6153990415e70f0d92934c25958d",
+        "randomness": "0xd777fad003ebc8225cd2a103b754f1135a37b1c5c3874edb15015724edbf4c89",
+        "proofHash": "0x920517ffbd22783191909a726e3a14fc1cafc116f15f9d2ae8121d03469a5ce1",
+        "transcriptHash": "0xfc69349731233c866bbdb1977024f8f760a85e7a9f1fac134e2a2c659ce4802f",
+        "fulfilled": true,
+        "delivered": true,
+        "refunded": false,
+        "epochId": "4136",
+        "epochHash": "0x573910acef60598dc380b214251f92dcc66a78232edb17300c46bcb1783937ca"
+      }
+    },
+    "checksPerformedAtExport": "VRF proof + pinned key + request/consumer/receipt/block bindings; epoch source attestations rely on onchain coordinator verification"
+  },
+  "verification": {
+    "manifestHash": "Keccak-256 of the Lottewy canonical typed serialization, not JSON.stringify(manifest).",
+    "replay": "Replay the versioned selection algorithm using manifest, randomWord and commitment. Compare all winner and alternate entry IDs in order; selection.steps records each derived hash and range operation.",
+    "onchain": "Independently verify canonical transaction receipts, request/consumer/seed bindings and the D20DAO VRF packet against the public key. Do not treat this JSON or its export checks as a trusted signature.",
+    "scope": "Public entry commitments and masked labels only. Raw private entries and their salts are excluded. Epoch source attestations rely on coordinator and registry onchain verification. This does not prove participant identity or prize delivery."
+  }
+}

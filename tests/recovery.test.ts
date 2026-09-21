@@ -110,11 +110,34 @@ it("does not reserve another nonce while a draw is submitting or the lease has e
   expect(await processRecovery(env, client, token, true)).toBe(false);
   expect(fake.sign).not.toHaveBeenCalled();
   db.sqlite.prepare("UPDATE leases SET expires=0 WHERE name='relayer'").run();
-  await expect(processRecovery(env, client, token, false)).rejects.toThrow();
+  expect(await processRecovery(env, client, token, false)).toBe(false);
   expect(broadcasts).toBe(0);
   expect(
     db.sqlite.prepare("SELECT count(*) n FROM recovery_transactions").get(),
   ).toMatchObject({ n: 0 });
+});
+it("skips unjournaled recovery when liquidity is already reserved for paid draws", async () => {
+  db.sqlite
+    .prepare(
+      `INSERT INTO operations(id,owner,commitment,payment_key,status,public_json,created,amount,payment_network,payment_ref,review_json,reserved_units)
+    SELECT 'funded-next',owner,commitment,'next-payment','paid',public_json,created,amount,payment_network,payment_ref,review_json,1000000 FROM operations LIMIT 1`,
+    )
+    .run();
+  expect(await processRecovery(env, client, token, false)).toBe(false);
+  expect(broadcasts).toBe(0);
+  expect(
+    db.sqlite.prepare("SELECT count(*) n FROM recovery_transactions").get(),
+  ).toMatchObject({ n: 0 });
+});
+it("adopts a recovery journal when its commit acknowledgement is lost", async () => {
+  const realBatch = env.DB.batch.bind(env.DB);
+  env.DB.batch = async (statements: any[]) => {
+    await realBatch(statements);
+    throw new Error("Lost response");
+  };
+  expect(await processRecovery(env, client, token, false)).toBe(true);
+  expect(broadcasts).toBe(1);
+  expect(fake.sign).toHaveBeenCalledTimes(1);
 });
 it("never refunds an already fulfilled request and enforces a recovery expense cap", async () => {
   db.sqlite.prepare("UPDATE operations SET status='refund_due'").run();

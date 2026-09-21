@@ -33,4 +33,8 @@ The local Worker passed a real Circle Gateway SDK payment of 0.25 test USDC and 
 
 The read-only D20DAO agent API reference reviewed for payment identity, durable transaction journaling and uncertainty recovery was `d20dao/agent-api` at commit `9f7a399c697647346eb85844db85678bfd310906`. Its automatic replacement-draw behavior is deliberately not part of Lottewy: a giveaway never rerolls to a new random word.
 
+The follow-up Astra high review found and verified fixes for finalized binding-conflict queue starvation, historical fulfillment log gaps, unsent conflict reservations and unaffordable optional recovery. Conflicts are isolated as `binding_conflict`; pending signed nonces are preserved until their canonical receipts. Historical scans persist bounded consecutive pages in the waiting queue. Optional recovery yields to already-funded draws, and an uncertain journal acknowledgement is reconciled before another nonce can be used.
+
+The final pre-mainnet run completed request **5264** with one new 0.25 test-USDC SDK payment and verified proof export. Mainnet remains preparation-only: no mainnet transaction or Worker deployment is authorized. Wallet identities and current chain pins were checked read-only by the website repository's `scripts/mainnet-preflight.mjs`. Production price/contact and the new mainnet consumer deployment/profile must be finalized before launch; the active runtime is still testnet-only.
+
 Secrets, local databases, artifacts and private Markdown are ignored. Before committing, run `node scripts/check-secrets.mjs --staged` and `node scripts/check-staged-docs.mjs`. Only English README and implementation documentation are intended for publication.
