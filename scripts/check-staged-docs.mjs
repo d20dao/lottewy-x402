@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 const allowed = new Set([
   "README.md",
+  "AGENTS.md",
   "UI-CONTEXT.md",
   "docs/IMPLEMENTATION.md",
 ]);

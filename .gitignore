@@ -9,4 +9,5 @@ dist/
 coverage/
 **/*.md
 !/README.md
+!/AGENTS.md
 !/docs/IMPLEMENTATION.md

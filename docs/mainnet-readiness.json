@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-09-21T21:54:48.724Z",
+  "preparedStatus": 200,
+  "unpaidStatus": 402,
+  "price": {
+    "amount": "0.058883",
+    "currency": "USDC",
+    "mode": "cost_estimate",
+    "serviceFee": "0.035100",
+    "gasBudget": "0.023783",
+    "platformFee": "0.000000",
+    "description": "D20DAO fee budget plus estimated gas budget, rounded up to six decimals. No platform markup. Actual network spending may be lower."
+  },
+  "quoteExpiresAt": 1790027988,
+  "accepted": [
+    {
+      "network": "eip155:1",
+      "amount": "58883",
+      "asset": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    },
+    {
+      "network": "eip155:8453",
+      "amount": "58883",
+      "asset": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+    },
+    {
+      "network": "eip155:5042",
+      "amount": "58883",
+      "asset": "0x3600000000000000000000000000000000000000"
+    }
+  ],
+  "paid": false
+}

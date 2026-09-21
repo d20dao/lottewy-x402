@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Agent giveaway API with Circle Gateway USDC payments on testnet",
+  "description": "Agent-payable verifiable giveaways on Arc Mainnet with Circle Gateway USDC cost quotes",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
