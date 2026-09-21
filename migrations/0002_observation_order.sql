@@ -1,0 +1,1 @@
+ALTER TABLE operations ADD COLUMN observed_block INTEGER NOT NULL DEFAULT 0;

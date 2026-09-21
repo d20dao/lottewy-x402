@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "upgradeable": true,
+  "chainId": 5042002,
+  "address": "0x8c190538f506c305a16576cbf832877e3775700b",
+  "codeHash": "0x752a0da23ba14c1b45e3f6a8b224df28db6fec0631818838fbdbd965897b3463",
+  "implementationAddress": "0xcff0e2f6514432dd02564fd432d8b4c61d51860f",
+  "implementationCodeHash": "0xddcf7a4c5845539a92d546c6e7115ddd13e87179c31be11406e9b0a6c401427f",
+  "owner": "0x7ad78fc8097DFEA5c12DBb503D6EB6E60f34B40B",
+  "relayer": "0xAf3a40fF429e2976958912a9AB7Dbf2fa7d1E043",
+  "transactionHash": "0x2f548869dd7971c265b434ac517237cc830824549d7c0d29f77012ee7fc97be4",
+  "implementationTransactionHash": "0xe364ff0d712b4df1cd52ef88232a5f320fae2e78b240660179b6674cb9f58b8c",
+  "blockNumber": "63265308",
+  "upgradeTransactionHash": "0x4d46bb402daf68cd8ae3cfc24636697042c330fc46f371bef02ca5c79394faa0",
+  "previousImplementationAddress": "0x142f0e4eda378d62d4d83298127bc31ee13caee3"
+}

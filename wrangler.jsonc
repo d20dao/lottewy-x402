@@ -1,0 +1,103 @@
+{
+  "name": "lottewy-agent-api",
+  "main": "src/index.ts",
+  "account_id": "d9fa81565ed7a49a6076dba363d09f10",
+  "compatibility_date": "2026-09-21",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "ratelimits": [
+    {
+      "name": "EDGE_LIMITER",
+      "namespace_id": "72609121",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lottewy-agent-testnet",
+      "database_id": "4581093f-9303-4c94-bb25-d284b4a69186",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "PUBLIC_ORIGIN": "http://127.0.0.1:8788",
+    "WEB_ORIGIN": "http://127.0.0.1:5173",
+    "SUPPORT_EMAIL": "",
+    "SELLER_ADDRESS": "0x7ad78fc8097dfea5c12dbb503d6eb6e60f34b40b",
+    "RPC_URL": "https://rpc.drpc.testnet.arc.io",
+    "CONSUMER_ADDRESS": "0x8c190538f506c305a16576cbf832877e3775700b",
+    "CONSUMER_CODE_HASH": "0x752a0da23ba14c1b45e3f6a8b224df28db6fec0631818838fbdbd965897b3463",
+    "IMPLEMENTATION_ADDRESS": "0xcff0e2f6514432dd02564fd432d8b4c61d51860f",
+    "IMPLEMENTATION_CODE_HASH": "0xddcf7a4c5845539a92d546c6e7115ddd13e87179c31be11406e9b0a6c401427f",
+    "PRICE_USDC": "0.250000",
+    "GAS_LIMIT": "1000000",
+    "JEV_MODEL": "jev-1.13.0",
+    "JEV_MODE": "live",
+    "MODE": "development"
+  },
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "env": {
+    "testnet": {
+      "name": "lottewy-agent-api-testnet",
+      "account_id": "d9fa81565ed7a49a6076dba363d09f10",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        {
+          "pattern": "api.lottewy.com",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "PUBLIC_ORIGIN": "https://api.lottewy.com",
+        "WEB_ORIGIN": "https://testnet.lottewy.com",
+        "SUPPORT_EMAIL": "",
+        "SELLER_ADDRESS": "0x7ad78fc8097dfea5c12dbb503d6eb6e60f34b40b",
+        "RPC_URL": "https://rpc.drpc.testnet.arc.io",
+        "CONSUMER_ADDRESS": "0x8c190538f506c305a16576cbf832877e3775700b",
+        "CONSUMER_CODE_HASH": "0x752a0da23ba14c1b45e3f6a8b224df28db6fec0631818838fbdbd965897b3463",
+        "IMPLEMENTATION_ADDRESS": "0xcff0e2f6514432dd02564fd432d8b4c61d51860f",
+        "IMPLEMENTATION_CODE_HASH": "0xddcf7a4c5845539a92d546c6e7115ddd13e87179c31be11406e9b0a6c401427f",
+        "PRICE_USDC": "",
+        "GAS_LIMIT": "1000000",
+        "JEV_MODEL": "jev-1.13.0",
+        "JEV_MODE": "live",
+        "MODE": "production"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "lottewy-agent-testnet",
+          "database_id": "4581093f-9303-4c94-bb25-d284b4a69186",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "ratelimits": [
+        {
+          "name": "EDGE_LIMITER",
+          "namespace_id": "72609121",
+          "simple": {
+            "limit": 60,
+            "period": 60
+          }
+        }
+      ],
+      "triggers": {
+        "crons": [
+          "* * * * *"
+        ]
+      }
+    }
+  }
+}

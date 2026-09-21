@@ -1,0 +1,31 @@
+{
+  "name": "@d20dao/lottewy-x402",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent giveaway API with Circle Gateway USDC payments on testnet",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev": "wrangler dev --local --port 8788",
+    "deploy": "node scripts/deploy.mjs"
+  },
+  "dependencies": {
+    "@2toad/profanity": "3.3.0",
+    "@circle-fin/x402-batching": "3.5.0",
+    "@d20dao/vrf-sdk": "0.4.0",
+    "@x402/core": "2.26.0",
+    "@x402/evm": "2.26.0",
+    "express": "5.2.1",
+    "viem": "2.56.8"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "13.1.0",
+    "@cloudflare/workers-types": "5.20260921.1",
+    "@types/express": "5.0.6",
+    "@types/node": "26.6.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.1",
+    "wrangler": "4.136.0"
+  }
+}

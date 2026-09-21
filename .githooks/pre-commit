@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+node scripts/check-staged-docs.mjs
+node scripts/check-secrets.mjs --staged

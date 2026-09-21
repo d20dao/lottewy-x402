@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.dev.vars*
+.wrangler/
+artifacts/
+dist/
+coverage/
+**/*.md
+!/README.md
+!/docs/IMPLEMENTATION.md

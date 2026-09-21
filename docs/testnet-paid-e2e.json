@@ -1,0 +1,15 @@
+{
+  "environment": "local Cloudflare Worker; real Arc Testnet and Circle Gateway testnet",
+  "testOnly": true,
+  "client": "@circle-fin/x402-batching GatewayClient 3.5.0",
+  "giveawayId": "9b264aa7-d036-483e-b010-571ac7f55ea0",
+  "payment": {
+    "status": 200,
+    "amount": "250000",
+    "settlement": "80c1482a-c88a-4486-ac18-98474203ff88",
+    "id": "9b264aa7-d036-483e-b010-571ac7f55ea0"
+  },
+  "requestId": "5263",
+  "proofVerified": true,
+  "depositTransaction": "0x4661053d82c1961a4907ffb0004381f339773b8ea211fb8e3cba284acc9b80d2"
+}
