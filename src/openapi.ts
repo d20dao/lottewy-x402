@@ -103,6 +103,43 @@ export function openapi(env: Env) {
           },
         },
       },
+      "/v1/quote/openapi": {
+        post: {
+          operationId: "quotedOpenapi",
+          summary: "Get an exact-price OpenAPI document for a prepared draft",
+          description:
+            "Free, no payment or publication. Use the same draftToken for this request and /v1/roll. The document expires with the quote. Never put draft tokens in URLs.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["draftToken"],
+                  properties: {
+                    draftToken: {
+                      type: "string",
+                      description:
+                        "Encrypted token returned by POST /v1/giveaways. Keep private.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description:
+                "OpenAPI 3.1 document whose /v1/roll price exactly matches this token's unpaid 402 challenge, with x-quote-expires-at.",
+            },
+            "400": {
+              description:
+                "Invalid, expired or incompatible draft token. No payment was taken.",
+            },
+          },
+        },
+      },
       "/v1/roll": {
         post: {
           operationId: "payAndRoll",
@@ -117,7 +154,7 @@ export function openapi(env: Env) {
               ...(env.PRICING_MODE === "cost"
                 ? {
                     description:
-                      "Reference estimate. Prepare a draft for a five-minute price bound to its token: D20DAO fee plus estimated gas, with no platform markup.",
+                      "Shared five-minute discovery estimate, not a payment authorization. Prepare a draft for its exact D20DAO plus gas quote. POST its draftToken to /v1/quote/openapi for an exact-price specification before pre-authorizing. No platform markup.",
                   }
                 : {}),
             },
@@ -339,6 +376,17 @@ export function openapi(env: Env) {
                 description: string(
                   "Explanation of the quote and estimation policy.",
                 ),
+              },
+            },
+            quoteOpenapi: {
+              type: "object",
+              description:
+                "Free exact-price OpenAPI endpoint. POST the same draftToken in the JSON body; never put it in the URL.",
+              properties: {
+                method: string("POST."),
+                url: string("Absolute HTTPS quote specification endpoint.", {
+                  format: "uri",
+                }),
               },
             },
             next: {

@@ -208,6 +208,23 @@ it("binds the D20DAO plus gas estimate to the draft and charges that quote witho
     platformFee: "0.000000",
   });
   expect(p.expiresAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 300);
+  const quoteSpecResponse = await post("/v1/quote/openapi", {
+    draftToken: p.draftToken,
+  });
+  expect(quoteSpecResponse.status).toBe(200);
+  const quoteSpec = (await quoteSpecResponse.json()) as any;
+  await SwaggerParser.validate(quoteSpec);
+  expect(quoteSpec.paths["/v1/roll"].post["x-payment-info"].price).toEqual({
+    mode: "fixed",
+    currency: "USDC",
+    amount: p.price.amount,
+  });
+  expect(quoteSpec["x-quote-expires-at"]).toBe(p.expiresAt);
+  expect(JSON.stringify(quoteSpec)).not.toContain(p.draftToken);
+  expect(JSON.stringify(quoteSpec)).not.toContain(draft.entries[0]);
+  expect(
+    (await post("/v1/quote/openapi", { draftToken: "invalid" })).status,
+  ).toBe(400);
   const response = await post("/v1/roll", { draftToken: p.draftToken });
   expect(response.status).toBe(402);
   const requirement = JSON.parse(
@@ -231,6 +248,20 @@ it("binds the D20DAO plus gas estimate to the draft and charges that quote witho
     (await post("/v1/roll", { draftToken: p.draftToken }, header)).status,
   ).toBe(200);
   expect(settlements).toBe(1);
+});
+it("rejects expired exact-price specifications without taking payment", async () => {
+  env.PRICING_MODE = "cost";
+  env.MAX_QUOTE_USDC = "1.000000";
+  const p = await prepared();
+  const clock = vi.spyOn(Date, "now").mockReturnValue((p.expiresAt + 1) * 1000);
+  try {
+    expect(
+      (await post("/v1/quote/openapi", { draftToken: p.draftToken })).status,
+    ).toBe(400);
+    expect(settlements).toBe(0);
+  } finally {
+    clock.mockRestore();
+  }
 });
 it("prepares a stateless encrypted draft and does not persist raw participant values", async () => {
   const p = await prepared();

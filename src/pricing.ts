@@ -20,16 +20,27 @@ export function priceBreakdown(plan: { value: string; reservedUnits: number }) {
       "D20DAO fee budget plus estimated gas budget, rounded up to six decimals. No platform markup. Actual network spending may be lower.",
   };
 }
-let cached: { key: string; until: number; work: Promise<string> } | undefined;
-export function referencePrice(env: Env): Promise<string> {
-  if (env.PRICING_MODE !== "cost") return Promise.resolve(env.PRICE_USDC);
-  const key = [
+export async function referencePrice(env: Env): Promise<string> {
+  if (env.PRICING_MODE !== "cost") return env.PRICE_USDC;
+  const profile = hash([
+    "discovery-price-v2",
     env.CONSUMER_ADDRESS,
+    env.CONSUMER_CODE_HASH,
+    env.IMPLEMENTATION_ADDRESS,
+    env.IMPLEMENTATION_CODE_HASH,
+    env.SELLER_ADDRESS,
     env.RPC_URL,
     env.GAS_LIMIT,
-    env.MAX_QUOTE_USDC,
-  ].join(":");
-  if (cached?.key === key && cached.until > Date.now()) return cached.work;
+    env.MAX_QUOTE_USDC || "1.000000",
+  ]);
+  // Default D1 queries use the primary. An isolate-local cache cannot keep
+  // discovery and a subsequent challenge consistent across different isolates.
+  const current = await env.DB.prepare(
+    "SELECT amount FROM discovery_prices WHERE profile=? AND expires>unixepoch()",
+  )
+    .bind(profile)
+    .first<{ amount: string }>();
+  if (current) return current.amount;
   const id = crypto.randomUUID();
   const ticket = {
     id,
@@ -37,12 +48,20 @@ export function referencePrice(env: Env): Promise<string> {
     commitment: hash(["lottewy-price-reference", id]),
     price: "0.000000",
   } as Ticket;
-  const work = executionPlan(env, ticket, true).then(
-    (plan) => priceBreakdown(plan).amount,
-  );
-  cached = { key, until: Date.now() + 30000, work };
-  work.catch(() => {
-    if (cached?.work === work) cached = undefined;
-  });
-  return work;
+  const amount = priceBreakdown(await executionPlan(env, ticket, true)).amount;
+  // Concurrent refreshes all return the winning value, never their local
+  // estimate. This is discovery only; real charges remain bound to draftToken.
+  const saved = await env.DB.prepare(
+    `
+    INSERT INTO discovery_prices(profile,amount,expires) VALUES (?, ?, unixepoch()+300)
+    ON CONFLICT(profile) DO UPDATE SET
+      amount=CASE WHEN discovery_prices.expires<=unixepoch() THEN excluded.amount ELSE discovery_prices.amount END,
+      expires=CASE WHEN discovery_prices.expires<=unixepoch() THEN excluded.expires ELSE discovery_prices.expires END
+    RETURNING amount
+  `,
+  )
+    .bind(profile, amount)
+    .first<{ amount: string }>();
+  if (!saved) throw new Error("Discovery price unavailable");
+  return saved.amount;
 }

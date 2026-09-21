@@ -15,7 +15,9 @@ Agent-payable, verifiable giveaway draws on **Arc Mainnet**. This is a separate 
 3. `POST /v1/roll` with that exact token. An unpaid request returns `402 Payment Required`. Pay using an x402 client and a Circle Gateway-funded wallet matching `owner`. Read accepted networks, assets and amounts from the returned payment requirements.
 4. A paid `200` acknowledges a durable operation, not a completed draw. Poll the returned status URL. After completion, download `/v1/giveaways/{id}/proof` and independently verify the recorded result.
 
-The OpenAPI amount and a bare 402 are reference estimates. The encrypted draft binds the actual payment quote and execution limits. `MAX_QUOTE_USDC` rejects excessive estimates rather than charging them. If an unpaid request returns `QUOTE_CHANGED`, prepare a fresh draft. Once payment exists or is uncertain, retain the original token and status URL; never authorize another payment to resolve uncertainty.
+The public OpenAPI amount and a bare 402 share a five-minute discovery estimate stored in D1 across all Worker instances. This estimate can change at refresh and is not a payment authorization. After preparation, POST `{ "draftToken": "..." }` to `/v1/quote/openapi` for a private, exact-price OpenAPI document. Its paid amount matches the 402 for that same token, and `x-quote-expires-at` states its expiry. Never put tokens in URLs or publish them. The encrypted draft binds the actual payment quote and execution limits. `MAX_QUOTE_USDC` rejects excessive estimates rather than charging them. If an unpaid request returns `QUOTE_CHANGED`, prepare a fresh draft. Once payment exists or is uncertain, retain the original token and status URL; never authorize another payment to resolve uncertainty.
+
+Apply migration `0006_discovery_prices.sql` before deploying the shared discovery pricing code. It adds a small reference-price table without changing payment journals or existing operations.
 
 ## Security model
 

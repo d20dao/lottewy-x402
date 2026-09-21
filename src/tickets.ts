@@ -127,6 +127,10 @@ export async function prepare(env: Env, input: any) {
     privateArchive: { draft, entries: built.privateEntries },
     expiresAt: ticket.expires,
     price: breakdown || { amount: ticket.price, currency: "USDC" },
+    quoteOpenapi: {
+      method: "POST",
+      url: `${env.PUBLIC_ORIGIN}/v1/quote/openapi`,
+    },
     next: { method: "POST", url: `${env.PUBLIC_ORIGIN}/v1/roll` },
   };
 }

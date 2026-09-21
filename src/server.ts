@@ -1,9 +1,9 @@
 import { apiDocs } from "./docs";
 import { brandSvg, brandIcoBase64 } from "./branding";
 import express from "express";
-import { ApiError, type Env } from "./config";
+import { ApiError, requireValue, type Env } from "./config";
 import { openapi } from "./openapi";
-import { prepare } from "./tickets";
+import { prepare, openTicket } from "./tickets";
 import { operation, quota } from "./store";
 import { publicOperation, processJobs } from "./chain";
 import { paidRoll } from "./payments";
@@ -85,6 +85,35 @@ export function createApp(
   app.get("/openapi.json", async (_req, res) =>
     res.json(openapi({ ...env, PRICE_USDC: await referencePrice(env) })),
   );
+  // Tokens stay in the request body, never URLs, access logs or public specs.
+  app.post("/v1/quote/openapi", async (req, res) => {
+    const ticket = await openTicket(env, req.body?.draftToken);
+    requireValue(
+      ticket.expires > Math.floor(Date.now() / 1000),
+      "Draft quote expired. Prepare a fresh draft before pre-authorizing payment",
+    );
+    requireValue(
+      env.PRICING_MODE === "cost"
+        ? ticket.pricingMode === "cost" && !!ticket.executionQuote
+        : ticket.price === env.PRICE_USDC,
+      "Pricing changed. Prepare a fresh draft before paying",
+    );
+    const spec = openapi({
+      ...env,
+      PRICING_MODE: "fixed",
+      PRICE_USDC: ticket.price,
+    });
+    res.json({
+      ...spec,
+      info: {
+        ...spec.info,
+        description:
+          "Exact price for the supplied draftToken only. Submit that same token to /v1/roll. Revalidate expired or changed quotes before payment.",
+      },
+      paths: { "/v1/roll": spec.paths["/v1/roll"] },
+      "x-quote-expires-at": ticket.expires,
+    });
+  });
   app.get("/docs", (_req, res) => res.type("html").send(apiDocs(env)));
   app.get("/favicon.ico", (_req, res) =>
     res
