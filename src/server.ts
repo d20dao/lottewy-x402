@@ -1,5 +1,5 @@
 import { apiDocs } from "./docs";
-import { brandSvg } from "./branding";
+import { brandSvg, brandIcoBase64 } from "./branding";
 import express from "express";
 import { ApiError, type Env } from "./config";
 import { openapi } from "./openapi";
@@ -86,7 +86,13 @@ export function createApp(
     res.json(openapi({ ...env, PRICE_USDC: await referencePrice(env) })),
   );
   app.get("/docs", (_req, res) => res.type("html").send(apiDocs(env)));
-  app.get(["/logo.svg", "/favicon.svg", "/favicon.ico"], (_req, res) =>
+  app.get("/favicon.ico", (_req, res) =>
+    res
+      .type("image/vnd.microsoft.icon")
+      .set("Cache-Control", "public, max-age=86400")
+      .send(Buffer.from(brandIcoBase64, "base64")),
+  );
+  app.get(["/logo.svg", "/favicon.svg"], (_req, res) =>
     res
       .type("image/svg+xml")
       .set("Cache-Control", "public, max-age=86400")
