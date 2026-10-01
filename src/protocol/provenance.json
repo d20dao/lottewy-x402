@@ -1,9 +1,9 @@
 {
   "repository": "https://github.com/d20dao/lottewy",
-  "commit": "13a14f1e5803c976cc90236cb8c8b831ce20f630",
+  "commit": "60e9809fbea910341b02ab5f7bbaac2068d1d414",
   "files": {
-    "docs/arc-mainnet.json": "c16a3ad81ec41034ac4f90b2f7200369f75e073ac84bcd95d763ed2bf9ba50cb",
-    "docs/arc-testnet.json": "3260de49bdaef88be0d661e5e4c85147e5adb1369bd000ed7421979fe86e2fa9",
+    "docs/arc-mainnet.json": "2fd832f94ea0bc74e874e19afde4d4e1d6c39d93facd3543c553916e218b5228",
+    "docs/arc-testnet.json": "44e9919f0ce850a2115779d2f53ebf15891f36621e070c72355e92f5b08b42c3",
     "docs/lottewy-mainnet.json": "cadd0e9de5e42ceda95c058cf19a09cd7c4cddfcc16cfb2ac9766bd66ee1bf33",
     "docs/lottewy-testnet.json": "d95419546865cb104c7098f49f42052fe87c3c7fe57497c84fc48419e23a0cf8",
     "shared/chain.ts": "cf43b96140760b959117061146512e8cff7599a3c44583e1be83ff54346643f6",
